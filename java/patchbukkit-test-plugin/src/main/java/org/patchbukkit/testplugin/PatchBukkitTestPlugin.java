@@ -19,6 +19,7 @@ public final class PatchBukkitTestPlugin extends JavaPlugin {
         framework.registerSuite(new PermissionsTests());
         framework.registerSuite(new RegistryTests());
         framework.registerSuite(new EntityTests());
+        framework.registerSuite(new EntityDetailsTests());
         framework.registerSuite(new ConsoleSenderTests());
         framework.registerSuite(new UnsafeValuesTests());
         framework.registerSuite(new StubTests());
