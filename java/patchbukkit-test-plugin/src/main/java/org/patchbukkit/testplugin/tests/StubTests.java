@@ -4,6 +4,8 @@ import org.bukkit.Bukkit;
 import org.patchbukkit.testplugin.ConformanceTest;
 import org.patchbukkit.testplugin.TestCategory;
 
+import static org.patchbukkit.testplugin.TestAssertions.*;
+
 import java.util.UUID;
 
 public final class StubTests {
@@ -112,6 +114,16 @@ public final class StubTests {
             category = TestCategory.STUBS)
     public void testGetAllowNether() {
         Bukkit.getServer().getAllowNether();
+    }
+
+    @ConformanceTest(name = "InventoryType initializes (menu registry fallback)", category = TestCategory.STUBS)
+    public void testInventoryTypeInit() {
+        // Touching InventoryType runs MenuType.<clinit>, which resolves every
+        // vanilla menu key via getOrThrow. A single gap used to poison both
+        // classes for the JVM lifetime and break all in-game commands.
+        org.bukkit.event.inventory.InventoryType type = org.bukkit.event.inventory.InventoryType.CHEST;
+        assertNotNull(type, "InventoryType.CHEST");
+        assertTrue(type.getDefaultSize() > 0, "InventoryType.CHEST.getDefaultSize()");
     }
 
     @ConformanceTest(name = "PaperLib detection classes and PaperLib.isPaper() are available", category = TestCategory.STUBS)
