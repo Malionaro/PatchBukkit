@@ -24,7 +24,7 @@ public final class EntityTests {
 
     @ConformanceTest(name = "Server.getEntity(UUID) works (null for unknown)", category = TestCategory.ENTITY)
     public void testGetEntity() {
-        Bukkit.getServer().getEntity(UUID.randomUUID());
+        assertNull(Bukkit.getServer().getEntity(UUID.randomUUID()), "Server.getEntity(unknown UUID)");
     }
 
     @ConformanceTest(name = "Player flight state and speed getters run cleanly", category = TestCategory.ENTITY)
