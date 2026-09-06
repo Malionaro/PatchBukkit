@@ -76,7 +76,14 @@ public class PatchBukkitEventFactory {
             }
             case CHUNK_UNLOAD -> {
                 var ev = event.getChunkUnload();
-                yield createGenericBukkitEvent("org.bukkit.event.world.ChunkUnloadEvent", ev);
+                // The bridge only carries chunk coords (no world); attribute to the
+                // first world like the other world fallbacks in this factory.
+                // getChunkAt is a pure local wrapper here, so this cannot reload
+                // the chunk being unloaded.
+                if (Bukkit.getWorlds().isEmpty()) yield null;
+                World world = Bukkit.getWorlds().get(0);
+                org.bukkit.Chunk chunk = world.getChunkAt(ev.getChunkX(), ev.getChunkZ());
+                yield new org.bukkit.event.world.ChunkUnloadEvent(chunk, true);
             }
             case ENTITIES_LOAD -> {
                 var ev = event.getEntitiesLoad();
