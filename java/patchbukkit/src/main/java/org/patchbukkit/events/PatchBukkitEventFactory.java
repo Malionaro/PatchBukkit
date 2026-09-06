@@ -40,6 +40,17 @@ public class PatchBukkitEventFactory {
         }
         if (Bukkit.getServer() instanceof org.patchbukkit.PatchBukkitServer server) {
             server.getEventManager().fireEvent(event, pluginName);
+            // Unregister disconnecting players only after listeners ran, so they
+            // still resolve during the event. Kicks disconnect too; if Pumpkin
+            // emits leave afterwards, the second removal is a harmless no-op.
+            // (Null guards: generically constructed events may carry null players.)
+            if (event instanceof org.bukkit.event.player.PlayerQuitEvent quit
+                    && quit.getPlayer() != null) {
+                server.unregisterPlayer(quit.getPlayer().getUniqueId());
+            } else if (event instanceof org.bukkit.event.player.PlayerKickEvent kick
+                    && kick.getPlayer() != null) {
+                server.unregisterPlayer(kick.getPlayer().getUniqueId());
+            }
         }
         return toFireEventResponse(event);
     }
