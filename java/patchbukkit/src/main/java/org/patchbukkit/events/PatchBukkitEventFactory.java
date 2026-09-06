@@ -13,6 +13,8 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import patchbukkit.common.UUID;
+import org.patchbukkit.bridge.BridgeUtils;
+import patchbukkit.bridge.NativeBridgeFfi;
 import patchbukkit.events.*;
 
 import java.lang.reflect.Constructor;
@@ -1361,7 +1363,19 @@ public class PatchBukkitEventFactory {
             java.util.UUID uuid = java.util.UUID.fromString(uuidStr);
             Player player = Bukkit.getServer().getPlayer(uuid);
             if (player == null) {
-                String name = defaultName == null || defaultName.isEmpty() ? "Player" : defaultName;
+                String name = defaultName;
+                // Last resort before the "Player" placeholder: ask the server for
+                // the real name. This covers players that joined without any join
+                // listener registered (or before JVM init completed).
+                try {
+                    var info = NativeBridgeFfi.getPlayerConnectionInfo(BridgeUtils.convertUuid(uuid));
+                    if (info != null && !info.getPlayerName().isEmpty()) {
+                        name = info.getPlayerName();
+                    }
+                } catch (Throwable ignored) {}
+                if (name == null || name.isEmpty()) {
+                    name = "Player";
+                }
                 player = new org.patchbukkit.entity.PatchBukkitPlayer(uuid, name);
                 if (Bukkit.getServer() instanceof org.patchbukkit.PatchBukkitServer server) {
                     server.registerPlayer(player);

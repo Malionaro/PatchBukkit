@@ -622,6 +622,7 @@ pub fn ffi_native_bridge_get_player_connection_info_impl(
             address: addr.ip().to_string(),
             port: addr.port() as i32,
             client_brand: "vanilla".to_string(),
+            player_name: player.gameprofile.name.clone(),
         }
     })
 }
