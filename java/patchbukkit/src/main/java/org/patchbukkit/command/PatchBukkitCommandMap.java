@@ -39,22 +39,15 @@ public class PatchBukkitCommandMap extends SimpleCommandMap {
     private void registerVariants(String key, Command command) {
         if (key == null || key.isEmpty()) return;
         key = key.toLowerCase().trim();
-        if (!knownCommands.containsKey(key)) {
-            knownCommands.put(key, command);
-        }
+        // Overwrite unconditionally (vanilla Bukkit semantics): re-registering a
+        // command must replace the old object, otherwise stale executors survive
+        // reloads and repeated registrations (e.g. /pbtest fixtures).
+        knownCommands.put(key, command);
         String clean = cleanLabel(key);
         if (!clean.isEmpty()) {
-            if (!knownCommands.containsKey(clean)) {
-                knownCommands.put(clean, command);
-            }
-            String single = "/" + clean;
-            if (!knownCommands.containsKey(single)) {
-                knownCommands.put(single, command);
-            }
-            String doubleSlash = "//" + clean;
-            if (!knownCommands.containsKey(doubleSlash)) {
-                knownCommands.put(doubleSlash, command);
-            }
+            knownCommands.put(clean, command);
+            knownCommands.put("/" + clean, command);
+            knownCommands.put("//" + clean, command);
         }
     }
 

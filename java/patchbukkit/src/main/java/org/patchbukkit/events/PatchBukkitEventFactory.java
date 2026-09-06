@@ -67,12 +67,12 @@ public class PatchBukkitEventFactory {
                 yield createGenericBukkitEvent("org.bukkit.event.world.ChunkPopulateEvent", ev);
             }
             case CHUNK_SAVE -> {
-                var ev = event.getChunkSave();
-                yield createGenericBukkitEvent("org.bukkit.event.world.ChunkUnloadEvent", ev);
+                LOGGER.log(Level.FINE, "Dropping CHUNK_SAVE: no Bukkit equivalent (ChunkSave is Pumpkin-internal)");
+                yield null;
             }
             case CHUNK_SEND -> {
-                var ev = event.getChunkSend();
-                yield createGenericBukkitEvent("org.bukkit.event.world.ChunkLoadEvent", ev);
+                LOGGER.log(Level.FINE, "Dropping CHUNK_SEND: no Bukkit equivalent (ChunkSend is Pumpkin-internal)");
+                yield null;
             }
             case CHUNK_UNLOAD -> {
                 var ev = event.getChunkUnload();
@@ -146,8 +146,14 @@ public class PatchBukkitEventFactory {
                 var ev = event.getMapInitialize();
                 yield createGenericBukkitEvent("org.bukkit.event.server.MapInitializeEvent", ev);
             }
-            case PACKET_RECEIVED -> null;
-            case PACKET_SENT -> null;
+            case PACKET_RECEIVED -> {
+                LOGGER.log(Level.FINE, "Dropping PACKET_RECEIVED: no Bukkit equivalent");
+                yield null;
+            }
+            case PACKET_SENT -> {
+                LOGGER.log(Level.FINE, "Dropping PACKET_SENT: no Bukkit equivalent");
+                yield null;
+            }
             case PLUGIN_DISABLE -> {
                 var ev = event.getPluginDisable();
                 var plugin = Bukkit.getPluginManager().getPlugin(ev.getPluginName());
@@ -333,7 +339,10 @@ public class PatchBukkitEventFactory {
                 Block b = player.getWorld().getBlockAt(ev.getBlockX(), ev.getBlockY(), ev.getBlockZ());
                 yield new org.bukkit.event.block.BlockBreakEvent(b, player);
             }
-            case BLOCK_BRUSH -> null;
+            case BLOCK_BRUSH -> {
+                LOGGER.log(Level.FINE, "Dropping BLOCK_BRUSH: no Bukkit equivalent");
+                yield null;
+            }
             case BLOCK_BURN -> {
                 var ev = event.getBlockBurn();
                 yield createGenericBukkitEvent("org.bukkit.event.block.BlockBurnEvent", ev);
@@ -507,9 +516,18 @@ public class PatchBukkitEventFactory {
                 var ev = event.getVaultDisplayItem();
                 yield createGenericBukkitEvent("org.bukkit.event.block.VaultDisplayItemEvent", ev);
             }
-            case DIALOG_CLEAR -> null;
-            case DIALOG_CLICK_ACTION -> null;
-            case DIALOG_SHOW -> null;
+            case DIALOG_CLEAR -> {
+                LOGGER.log(Level.FINE, "Dropping DIALOG_CLEAR: no Bukkit equivalent (Paper dialog)");
+                yield null;
+            }
+            case DIALOG_CLICK_ACTION -> {
+                LOGGER.log(Level.FINE, "Dropping DIALOG_CLICK_ACTION: no Bukkit equivalent (Paper dialog)");
+                yield null;
+            }
+            case DIALOG_SHOW -> {
+                LOGGER.log(Level.FINE, "Dropping DIALOG_SHOW: no Bukkit equivalent (Paper dialog)");
+                yield null;
+            }
             case ASYNC_PLAYER_CHAT -> {
                 var ev = event.getAsyncPlayerChat();
                 Player player = getPlayer(ev.getPlayerUuid().getValue());
@@ -520,7 +538,10 @@ public class PatchBukkitEventFactory {
                 var ev = event.getAsyncPlayerPreLogin();
                 yield createGenericBukkitEvent("org.bukkit.event.player.AsyncPlayerPreLoginEvent", ev);
             }
-            case BEDROCK_FORM_RESPONSE -> null;
+            case BEDROCK_FORM_RESPONSE -> {
+                LOGGER.log(Level.FINE, "Dropping BEDROCK_FORM_RESPONSE: no Bukkit equivalent");
+                yield null;
+            }
             case PLAYER_CHANGED_MAIN_HAND -> {
                 var ev = event.getPlayerChangedMainHand();
                 yield createGenericBukkitEvent("org.bukkit.event.player.PlayerChangedMainHandEvent", ev);
@@ -581,7 +602,10 @@ public class PatchBukkitEventFactory {
                 var ev = event.getPlayerBucketEntity();
                 yield createGenericBukkitEvent("org.bukkit.event.player.PlayerBucketEntityEvent", ev);
             }
-            case PLAYER_CHANGE_WORLD -> null;
+            case PLAYER_CHANGE_WORLD -> {
+                LOGGER.log(Level.FINE, "Dropping PLAYER_CHANGE_WORLD: no Bukkit equivalent, use PLAYER_CHANGED_WORLD");
+                yield null;
+            }
             case PLAYER_CHANGED_WORLD -> {
                 var ev = event.getPlayerChangedWorld();
                 yield createGenericBukkitEvent("org.bukkit.event.player.PlayerChangedWorldEvent", ev);
@@ -604,7 +628,10 @@ public class PatchBukkitEventFactory {
                 var ev = event.getPlayerCommandSend();
                 yield createGenericBukkitEvent("org.bukkit.event.player.PlayerCommandSendEvent", ev);
             }
-            case PLAYER_CUSTOM_PAYLOAD -> null;
+            case PLAYER_CUSTOM_PAYLOAD -> {
+                LOGGER.log(Level.FINE, "Dropping PLAYER_CUSTOM_PAYLOAD: no Bukkit equivalent");
+                yield null;
+            }
             case PLAYER_DROP_ITEM -> {
                 var ev = event.getPlayerDropItem();
                 yield createGenericBukkitEvent("org.bukkit.event.player.PlayerDropItemEvent", ev);
@@ -666,7 +693,10 @@ public class PatchBukkitEventFactory {
                 org.bukkit.block.Block b = player.getWorld().getBlockAt(ev.getClickedPosX(), ev.getClickedPosY(), ev.getClickedPosZ());
                 yield new org.bukkit.event.player.PlayerInteractEvent(player, act, player.getInventory().getItemInMainHand(), b, org.bukkit.block.BlockFace.SELF, org.bukkit.inventory.EquipmentSlot.HAND);
             }
-            case PLAYER_INTERACT_UNKNOWN_ENTITY -> null;
+            case PLAYER_INTERACT_UNKNOWN_ENTITY -> {
+                LOGGER.log(Level.FINE, "Dropping PLAYER_INTERACT_UNKNOWN_ENTITY: no Bukkit equivalent");
+                yield null;
+            }
             case PLAYER_ITEM_BREAK -> {
                 var ev = event.getPlayerItemBreak();
                 yield createGenericBukkitEvent("org.bukkit.event.player.PlayerItemBreakEvent", ev);
@@ -737,7 +767,10 @@ public class PatchBukkitEventFactory {
                 var ev = event.getPlayerOpenSign();
                 yield createGenericBukkitEvent("io.papermc.paper.event.player.PlayerOpenSignEvent", ev);
             }
-            case PLAYER_PERMISSION_CHECK -> null;
+            case PLAYER_PERMISSION_CHECK -> {
+                LOGGER.log(Level.FINE, "Dropping PLAYER_PERMISSION_CHECK: no Bukkit equivalent");
+                yield null;
+            }
             case PLAYER_PICKUP_ARROW -> {
                 var ev = event.getPlayerPickupArrow();
                 yield createGenericBukkitEvent("org.bukkit.event.player.PlayerPickupArrowEvent", ev);
@@ -1028,7 +1061,10 @@ public class PatchBukkitEventFactory {
                 var ev = event.getEntityTarget();
                 yield createGenericBukkitEvent("org.bukkit.event.entity.EntityTargetEvent", ev);
             }
-            case ENTITY_TARGET_BLOCK -> null;
+            case ENTITY_TARGET_BLOCK -> {
+                LOGGER.log(Level.FINE, "Dropping ENTITY_TARGET_BLOCK: no Bukkit equivalent");
+                yield null;
+            }
             case ENTITY_TARGET_LIVING_ENTITY -> {
                 var ev = event.getEntityTargetLivingEntity();
                 yield createGenericBukkitEvent("org.bukkit.event.entity.EntityTargetLivingEntityEvent", ev);
@@ -1149,7 +1185,10 @@ public class PatchBukkitEventFactory {
                 var ev = event.getVillagerReplenishTrade();
                 yield createGenericBukkitEvent("org.bukkit.event.entity.VillagerReplenishTradeEvent", ev);
             }
-            case VILLAGER_REPUTATION_CHANGE -> null;
+            case VILLAGER_REPUTATION_CHANGE -> {
+                LOGGER.log(Level.FINE, "Dropping VILLAGER_REPUTATION_CHANGE: no Bukkit equivalent");
+                yield null;
+            }
             case WARDEN_ANGER_CHANGE -> {
                 var ev = event.getWardenAngerChange();
                 yield createGenericBukkitEvent("io.papermc.paper.event.entity.WardenAngerChangeEvent", ev);
@@ -1178,8 +1217,14 @@ public class PatchBukkitEventFactory {
                 var ev = event.getPrepareItemEnchant();
                 yield createGenericBukkitEvent("org.bukkit.event.enchantment.PrepareItemEnchantEvent", ev);
             }
-            case DATA_NOT_SET -> null;
-            default -> null;
+            case DATA_NOT_SET -> {
+                LOGGER.log(Level.FINE, "Dropping event with DATA_NOT_SET");
+                yield null;
+            }
+            default -> {
+                LOGGER.log(Level.FINE, "Dropping unknown event type: {0}", event.getDataCase());
+                yield null;
+            }
         };
         } catch (Throwable t) {
             LOGGER.log(Level.SEVERE, "Exception in createEvent for " + event.getDataCase() + ": " + t.getMessage(), t);

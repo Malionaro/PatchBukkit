@@ -4,7 +4,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.patchbukkit.testplugin.ConformanceTest;
 import org.patchbukkit.testplugin.TestCategory;
-import org.patchbukkit.testplugin.TestExpectation;
 
 import java.util.Collection;
 import java.util.UUID;
@@ -23,8 +22,7 @@ public final class EntityTests {
         }
     }
 
-    @ConformanceTest(name = "Server.getEntity(UUID) stub", category = TestCategory.ENTITY,
-            expectation = TestExpectation.EXPECT_UNSUPPORTED)
+    @ConformanceTest(name = "Server.getEntity(UUID) works (null for unknown)", category = TestCategory.ENTITY)
     public void testGetEntity() {
         Bukkit.getServer().getEntity(UUID.randomUUID());
     }

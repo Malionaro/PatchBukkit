@@ -49,6 +49,13 @@ glob = "0.3"
 [profile.release]
 lto = true
 
+[profile.dev]
+# Windows link.exe cannot resolve symbols in rlibs larger than 4GB
+# (COFF archive 32-bit offset limit). Full debuginfo inflates libpumpkin
+# to ~4.7GB, causing mass LNK2019 when linking the debug cdylib.
+# Line tables keep file:line in panics while staying far below the limit.
+debug = "line-tables-only"
+
 [lints.clippy]
 # Groups
 all = { level = "deny", priority = -1 }
