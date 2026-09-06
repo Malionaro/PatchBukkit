@@ -365,8 +365,26 @@ public class PatchBukkitEntity implements Entity {
 
     @Override
     public @NotNull World getWorld() {
-        var location = NativeBridgeFfi.getLocation(BridgeUtils.convertUuid(this.uuid));
-        return PatchBukkitWorld.getOrCreate(BridgeUtils.convertUuid(location.getWorld().getUuid()));
+        // The Rust side returns null for entities it does not know (e.g. synthetic
+        // players created for events). Fall back to the first loaded world instead
+        // of throwing NPE so event construction can proceed.
+        try {
+            var location = NativeBridgeFfi.getLocation(BridgeUtils.convertUuid(this.uuid));
+            if (location != null && location.hasWorld()
+                    && location.getWorld().getUuid() != null
+                    && !location.getWorld().getUuid().getValue().isEmpty()) {
+                PatchBukkitWorld world = PatchBukkitWorld.getOrCreate(
+                    BridgeUtils.convertUuid(location.getWorld().getUuid()));
+                if (world != null) {
+                    return world;
+                }
+            }
+        } catch (Throwable ignored) {}
+        java.util.List<World> worlds = org.bukkit.Bukkit.getWorlds();
+        if (!worlds.isEmpty()) {
+            return worlds.get(0);
+        }
+        throw new IllegalStateException("No world available for entity " + this.uuid);
     }
 
     @Override
