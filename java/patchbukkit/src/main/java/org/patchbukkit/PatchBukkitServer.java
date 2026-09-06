@@ -1214,14 +1214,25 @@ public class PatchBukkitServer implements Server {
         int count = 0;
         for (Player player : getOnlinePlayers()) {
             if (permission.isEmpty() || player.hasPermission(permission)) {
-                player.sendMessage(message);
-                count++;
+                try {
+                    player.sendMessage(message);
+                    count++;
+                } catch (Throwable t) {
+                    // One broken receiver (e.g. a player whose native handle
+                    // went stale mid-quit) must not abort the broadcast or
+                    // kill the calling command with a native failure.
+                    logger.log(Level.WARNING, "Failed to send broadcast to " + player.getName(), t);
+                }
             }
         }
-        ConsoleCommandSender console = getConsoleSender();
-        if (permission.isEmpty() || console.hasPermission(permission)) {
-            console.sendMessage(message);
-            count++;
+        try {
+            ConsoleCommandSender console = getConsoleSender();
+            if (permission.isEmpty() || console.hasPermission(permission)) {
+                console.sendMessage(message);
+                count++;
+            }
+        } catch (Throwable t) {
+            logger.log(Level.WARNING, "Failed to send broadcast to console", t);
         }
         return count;
     }
