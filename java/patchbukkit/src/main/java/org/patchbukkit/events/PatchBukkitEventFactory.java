@@ -722,7 +722,7 @@ public class PatchBukkitEventFactory {
             }
             case PLAYER_JOIN -> {
                 var ev = event.getPlayerJoin();
-                Player player = getPlayer(ev.getPlayerUuid().getValue());
+                Player player = getPlayer(ev.getPlayerUuid().getValue(), ev.getPlayerName());
                 if (player == null) yield null;
                 Component msg = ev.getJoinMessage().isEmpty() ? Component.empty() : GsonComponentSerializer.gson().deserialize(ev.getJoinMessage());
                 yield new org.bukkit.event.player.PlayerJoinEvent(player, msg);
@@ -1341,11 +1341,17 @@ public class PatchBukkitEventFactory {
 
     @Nullable
     public static Player getPlayer(@NotNull String uuidStr) {
+        return getPlayer(uuidStr, "Player");
+    }
+
+    @Nullable
+    public static Player getPlayer(@NotNull String uuidStr, @NotNull String defaultName) {
         try {
             java.util.UUID uuid = java.util.UUID.fromString(uuidStr);
             Player player = Bukkit.getServer().getPlayer(uuid);
             if (player == null) {
-                player = new org.patchbukkit.entity.PatchBukkitPlayer(uuid, "Player");
+                String name = defaultName == null || defaultName.isEmpty() ? "Player" : defaultName;
+                player = new org.patchbukkit.entity.PatchBukkitPlayer(uuid, name);
                 if (Bukkit.getServer() instanceof org.patchbukkit.PatchBukkitServer server) {
                     server.registerPlayer(player);
                 }
