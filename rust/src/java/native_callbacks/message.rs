@@ -13,7 +13,15 @@ pub fn ffi_native_bridge_send_message_impl(request: SendMessageRequest) -> Optio
 
     let player = ctx.plugin_context.server.get_player_by_uuid(player_uuid);
     if let Some(player) = player {
-        player.send_system_message(&TextComponent::from_legacy_string(&request.message));
+        // Prefer the structured form so click/hover interactions survive;
+        // fall back to legacy text when it is absent or unparseable.
+        let text = if request.message_json.is_empty() {
+            TextComponent::from_legacy_string(&request.message)
+        } else {
+            serde_json::from_str::<TextComponent>(&request.message_json)
+                .unwrap_or_else(|_| TextComponent::from_legacy_string(&request.message))
+        };
+        player.send_system_message(&text);
     }
 
     Some(())
