@@ -200,17 +200,42 @@ public class PatchBukkitEntity implements Entity {
 
     @Override
     public boolean hasPermission(String name) {
+        if (getPermissible().isPermissionSet(name)) {
+            return getPermissible().hasPermission(name);
+        }
+        // Not set locally: ask the server (vanilla nodes, plugin defaults
+        // and mirrored attachments live there).
+        try {
+            var resp = patchbukkit.bridge.NativeBridgeFfi.hasPlayerPermission(
+                patchbukkit.permission.HasPlayerPermissionRequest.newBuilder()
+                    .setUuid(BridgeUtils.convertUuid(getUniqueId()))
+                    .setNode(name != null ? name : "")
+                    .build());
+            if (resp != null) {
+                return resp.getHas();
+            }
+        } catch (Throwable ignored) {}
         return getPermissible().hasPermission(name);
     }
 
     @Override
     public boolean hasPermission(Permission perm) {
-        return getPermissible().hasPermission(perm);
+        return perm != null ? hasPermission(perm.getName()) : false;
     }
 
     @Override
     public @NotNull PermissionAttachment addAttachment(@NotNull Plugin plugin, @NotNull String name, boolean value) {
-        return getPermissible().addAttachment(plugin, name, value);
+        PermissionAttachment attachment = getPermissible().addAttachment(plugin, name, value);
+        // Mirror explicit grants so server-side checks see them too.
+        try {
+            patchbukkit.bridge.NativeBridgeFfi.setPlayerPermission(
+                patchbukkit.permission.SetPlayerPermissionRequest.newBuilder()
+                    .setUuid(BridgeUtils.convertUuid(getUniqueId()))
+                    .setNode(name)
+                    .setValue(value)
+                    .build());
+        } catch (Throwable ignored) {}
+        return attachment;
     }
 
     @Override
@@ -231,6 +256,17 @@ public class PatchBukkitEntity implements Entity {
     @Override
     public void removeAttachment(@NotNull PermissionAttachment attachment) {
         getPermissible().removeAttachment(attachment);
+        try {
+            if (attachment != null && attachment.getPermissions() != null) {
+                for (String node : attachment.getPermissions().keySet()) {
+                    patchbukkit.bridge.NativeBridgeFfi.unsetPlayerPermission(
+                        patchbukkit.permission.UnsetPlayerPermissionRequest.newBuilder()
+                            .setUuid(BridgeUtils.convertUuid(getUniqueId()))
+                            .setNode(node)
+                            .build());
+                }
+            }
+        } catch (Throwable ignored) {}
     }
 
     @Override
@@ -947,20 +983,54 @@ public class PatchBukkitEntity implements Entity {
 
     @Override
     public @Nullable EntitySnapshot createSnapshot() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'createSnapshot'");
+        return new PatchBukkitEntitySnapshot(
+            getType(),
+            getLocation().clone(),
+            this.customName,
+            this.customNameVisible);
     }
 
     @Override
     public @NotNull Entity copy() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'copy'");
+        return copy(getLocation().clone());
     }
 
     @Override
     public @NotNull Entity copy(@NotNull Location to) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'copy'");
+        PatchBukkitEntity copy = new PatchBukkitEntity(UUID.randomUUID(), this.name);
+        copy.entityType = this.entityType;
+        copy.cachedLocation = to.clone();
+        copy.copyLocalStateFrom(this);
+        return copy;
+    }
+
+    /**
+    * Copies local (non-FFI) state into another instance of the same class.
+    * Server-side state stays with the original; the copy starts detached.
+    */
+    protected void copyLocalStateFrom(@NotNull PatchBukkitEntity other) {
+        this.customName = other.customName;
+        this.customNameString = other.customNameString;
+        this.customNameVisible = other.customNameVisible;
+        other.persistentDataContainer.copyTo(this.persistentDataContainer, false);
+        this.fireTicks = other.fireTicks;
+        this.visualFire = other.visualFire;
+        this.freezeTicks = other.freezeTicks;
+        this.freezeTickingLocked = other.freezeTickingLocked;
+        this.invisible = other.invisible;
+        this.noPhysics = other.noPhysics;
+        this.persistent = other.persistent;
+        this.glowing = other.glowing;
+        this.invulnerable = other.invulnerable;
+        this.silent = other.silent;
+        this.gravity = other.gravity;
+        this.portalCooldown = other.portalCooldown;
+        this.scoreboardTags.clear();
+        this.scoreboardTags.addAll(other.scoreboardTags);
+        this.lastDamageCause = other.lastDamageCause;
+        this.ticksLived = other.ticksLived;
+        this.fixedPose = other.fixedPose;
+        this.fromMobSpawner = other.fromMobSpawner;
     }
 
     @Override
@@ -1052,20 +1122,75 @@ public class PatchBukkitEntity implements Entity {
 
     @Override
     public boolean collidesAt(@NotNull Location location) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'collidesAt'");
+        double halfWidth = getWidth() / 2.0;
+        double height = getHeight();
+        BoundingBox box = new BoundingBox(
+            location.getX() - halfWidth, location.getY(), location.getZ() - halfWidth,
+            location.getX() + halfWidth, location.getY() + height, location.getZ() + halfWidth);
+        return collides(box, location.getWorld());
     }
 
     @Override
     public boolean wouldCollideUsing(@NotNull BoundingBox boundingBox) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'wouldCollideUsing'");
+        return collides(boundingBox, getWorld());
     }
 
+    /**
+    * Tests a world-space box against solid blocks and other entities.
+    * Block solidity comes from local material data; entities come from the
+    * world's nearby lookup. The entity itself is excluded.
+    */
+    private boolean collides(@NotNull BoundingBox box, @Nullable World world) {
+        if (world != null) {
+            int minX = (int) Math.floor(box.getMinX());
+            int maxX = (int) Math.floor(box.getMaxX() - 1e-7);
+            int minY = (int) Math.floor(box.getMinY());
+            int maxY = (int) Math.floor(box.getMaxY() - 1e-7);
+            int minZ = (int) Math.floor(box.getMinZ());
+            int maxZ = (int) Math.floor(box.getMaxZ() - 1e-7);
+            try {
+                for (int x = minX; x <= maxX; x++) {
+                    for (int y = minY; y <= maxY; y++) {
+                        for (int z = minZ; z <= maxZ; z++) {
+                            if (world.getBlockAt(x, y, z).getType().isSolid()) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {}
+            try {
+                double cx = (box.getMinX() + box.getMaxX()) / 2.0;
+                double cy = (box.getMinY() + box.getMaxY()) / 2.0;
+                double cz = (box.getMinZ() + box.getMaxZ()) / 2.0;
+                double rx = (box.getMaxX() - box.getMinX()) / 2.0 + 1.0;
+                double ry = (box.getMaxY() - box.getMinY()) / 2.0 + 1.0;
+                double rz = (box.getMaxZ() - box.getMinZ()) / 2.0 + 1.0;
+                for (Entity other : world.getNearbyEntities(new Location(world, cx, cy, cz), rx, ry, rz)) {
+                    if (other == null || other.getUniqueId().equals(getUniqueId())) {
+                        continue;
+                    }
+                    try {
+                        if (other.getBoundingBox().overlaps(box)) {
+                            return true;
+                        }
+                    } catch (Throwable ignored) {}
+                }
+            } catch (Throwable ignored) {}
+        }
+        return false;
+    }
+
+    private volatile io.papermc.paper.threadedregions.scheduler.EntityScheduler entityScheduler;
+
     @Override
-    public @NotNull EntityScheduler getScheduler() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getScheduler'");
+    public @NotNull io.papermc.paper.threadedregions.scheduler.EntityScheduler getScheduler() {
+        io.papermc.paper.threadedregions.scheduler.EntityScheduler scheduler = this.entityScheduler;
+        if (scheduler == null) {
+            scheduler = new org.patchbukkit.scheduler.PatchBukkitEntityScheduler(this);
+            this.entityScheduler = scheduler;
+        }
+        return scheduler;
     }
 
     @Override

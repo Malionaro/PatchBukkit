@@ -638,7 +638,22 @@ public class PatchBukkitEventFactory {
                 var ev = event.getPlayerChat();
                 Player player = getPlayer(ev.getPlayerUuid().getValue());
                 if (player == null) yield null;
-                yield new org.bukkit.event.player.AsyncPlayerChatEvent(true, player, ev.getMessage(), new java.util.HashSet<>(Bukkit.getOnlinePlayers()));
+                // Bukkit ordering: async listeners first, then the sync event.
+                // Pumpkin only fires the sync chat event, so the async stage
+                // runs here before the sync event is handed to listeners.
+                org.bukkit.event.player.AsyncPlayerChatEvent async =
+                    new org.bukkit.event.player.AsyncPlayerChatEvent(true, player,
+                        ev.getMessage(), new java.util.HashSet<>(Bukkit.getOnlinePlayers()));
+                try {
+                    Bukkit.getPluginManager().callEvent(async);
+                } catch (Throwable t) {
+                    LOGGER.log(Level.WARNING, "AsyncPlayerChatEvent listener failed: " + t.getMessage());
+                }
+                org.bukkit.event.player.PlayerChatEvent sync =
+                    new org.bukkit.event.player.PlayerChatEvent(player, async.getMessage(),
+                        async.getFormat(), async.getRecipients());
+                sync.setCancelled(async.isCancelled());
+                yield sync;
             }
             case PLAYER_COMMAND_PREPROCESS -> {
                 var ev = event.getPlayerCommandPreprocess();

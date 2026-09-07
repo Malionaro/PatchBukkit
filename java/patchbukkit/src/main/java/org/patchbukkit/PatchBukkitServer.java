@@ -1743,11 +1743,30 @@ public class PatchBukkitServer implements Server {
 
     @Override
     public @Nullable Advancement getAdvancement(@NotNull NamespacedKey key) {
-        return null;
+        if (key == null) {
+            return null;
+        }
+        return org.patchbukkit.advancement.PatchBukkitAdvancement.fetch(key);
     }
 
     @Override
     public @NotNull Iterator<Advancement> advancementIterator() {
+        try {
+            var resp = patchbukkit.bridge.NativeBridgeFfi.listAdvancements(
+                patchbukkit.common.EmptyRequest.getDefaultInstance());
+            if (resp != null && resp.getAdvancementIdsCount() > 0) {
+                List<Advancement> out = new ArrayList<>(resp.getAdvancementIdsCount());
+                for (String id : resp.getAdvancementIdsList()) {
+                    try {
+                        Advancement advancement = getAdvancement(NamespacedKey.fromString(id));
+                        if (advancement != null) {
+                            out.add(advancement);
+                        }
+                    } catch (Throwable ignored) {}
+                }
+                return out.iterator();
+            }
+        } catch (Throwable ignored) {}
         return Collections.emptyIterator();
     }
 
